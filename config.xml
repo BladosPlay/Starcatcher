@@ -13,11 +13,11 @@
     <preference name="BackgroundColor" value="0xff1a1a2e" />
     
     <platform name="android">
-    <icon density="ldpi" src="res/icon/android/icon.png" />
-    <icon density="mdpi" src="res/icon/android/icon.png" />
-    <icon density="hdpi" src="res/icon/android/icon.png" />
-    <icon density="xhdpi" src="res/icon/android/icon.png" />
-    <icon density="xxhdpi" src="res/icon/android/icon.png" />
-    <icon density="xxxhdpi" src="res/icon/android/icon.png" />
+    <icon density="ldpi" src="res/i/android/icon.png" />
+    <icon density="mdpi" src="res/i/android/icon.png" />
+    <icon density="hdpi" src="res/i/android/icon.png" />
+    <icon density="xhdpi" src="res/i/android/icon.png" />
+    <icon density="xxhdpi" src="res/i/android/icon.png" />
+    <icon density="xxxhdpi" src="res/i/android/icon.png" />
 </platform>
 </widget>
