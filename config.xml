@@ -2,7 +2,7 @@
 <widget id="com.starcatcher.game" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>Лови Звезду</name>
     <description>Аркада - лови звёзды и уворачивайся от бомб</description>
-    <author email="you@example.com" href="https://example.com">Ваше Имя</author>
+    <author email="you@example.com">Ваше Имя</author>
     <content src="index.html" />
     
     <allow-intent href="http://*/*" />
@@ -13,11 +13,7 @@
     <preference name="BackgroundColor" value="0xff1a1a2e" />
     
     <platform name="android">
-    <icon density="ldpi" src="res/icon/android/i.png" />
-    <icon density="mdpi" src="res/icon/android/i.png" />
-    <icon density="hdpi" src="res/icon/android/i.png" />
-    <icon density="xhdpi" src="res/icon/android/i.png" />
-    <icon density="xxhdpi" src="res/icon/android/i.png" />
-    <icon density="xxxhdpi" src="res/icon/android/i.png" />
-</platform>
+        <preference name="android-minSdkVersion" value="22" />
+        <preference name="android-targetSdkVersion" value="33" />
+    </platform>
 </widget>
