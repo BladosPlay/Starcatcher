@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -16,33 +16,37 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '18'
     
-    - name: Setup Java
+    - name: Setup Java 11 (важно для Cordova 12)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '11'
     
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
-        packages: 'platforms;android-34 build-tools;34.0.0'
+        packages: 'platforms;android-33 build-tools;33.0.0'
     
-    - name: Install Cordova
-      run: npm install -g cordova@12.0.0
+    - name: Install Cordova 11 (более стабильная)
+      run: npm install -g cordova@11.0.0
     
-    - name: Install dependencies
-      run: npm install
-    
-    - name: Add Android platform
-      run: cordova platform add android@12.0.0
+    - name: Create Cordova project
+      run: |
+        cordova create app com.starcatcher.game "Лови Звезду"
+        cd app
+        rm -rf www
+        cp -r ../www ./
+        cp ../config.xml ./
+        cordova platform add android@11.0.0
     
     - name: Build APK
-      run: cordova build android --release -- --packageType=apk
+      working-directory: ./app
+      run: cordova build android --release
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        path: platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+        name: starcatcher-apk
+        path: app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
