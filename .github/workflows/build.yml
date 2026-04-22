@@ -48,13 +48,23 @@ jobs:
         # Добавляем платформу Android
         cordova platform add android@12.0.0
         
-        # ВАЖНО: возвращаемся в корень app и заходим в platforms/android
-        cd platforms/android
+        # ОТЛАДКА: смотрим, что в папке app
+        echo "=== Содержимое папки app ==="
+        ls -la
         
-        # Меняем версию Gradle
+        echo "=== Содержимое папки platforms (если есть) ==="
+        ls -la platforms || echo "Папки platforms нет"
+        
+        # Пробуем другой путь
+        echo "=== Текущая директория ==="
+        pwd
+        
+        # Меняем версию Gradle (используем полный путь)
+        cd app/platforms/android || cd platforms/android || echo "Не могу найти папку"
+        
         ./gradlew wrapper --gradle-version 8.5
         
-        # Возвращаемся в корень app
+        # Возвращаемся в app
         cd ../..
         
         # Запускаем сборку
