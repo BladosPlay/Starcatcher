@@ -34,17 +34,30 @@ jobs:
     
     - name: Create Cordova project and build
       run: |
+        # Создаём проект
         cordova create app com.starcatcher.game "Лови Звезду"
+        
+        # Переходим в папку проекта
         cd app
+        
+        # Копируем наши файлы
         rm -rf www
         cp -r ../www ./
         cp ../config.xml ./
+        
+        # Добавляем платформу Android
         cordova platform add android@12.0.0
         
+        # ВАЖНО: возвращаемся в корень app и заходим в platforms/android
         cd platforms/android
+        
+        # Меняем версию Gradle
         ./gradlew wrapper --gradle-version 8.5
+        
+        # Возвращаемся в корень app
         cd ../..
         
+        # Запускаем сборку
         cordova build android --release
     
     - name: Upload APK
