@@ -40,13 +40,11 @@ jobs:
         cp -r ../www ./
         cp ../config.xml ./
         cordova platform add android@12.0.0
-    
+        
     - name: Set Gradle version to 8.5
-      working-directory: ./app
+      working-directory: ./app/platforms/android
       run: |
-        cd platforms/android
         ./gradlew wrapper --gradle-version 8.5
-        cd ../..
     
     - name: Build APK
       working-directory: ./app
