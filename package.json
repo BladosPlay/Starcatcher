@@ -1,0 +1,24 @@
+{
+  "name": "starcatcher",
+  "displayName": "Лови Звезду",
+  "version": "1.0.0",
+  "description": "Аркадная игра - лови звёзды и уворачивайся от бомб",
+  "main": "www/index.html",
+  "scripts": {
+    "build": "cordova build android --release"
+  },
+  "author": "Ваше Имя",
+  "license": "MIT",
+  "dependencies": {
+    "cordova-android": "^12.0.0"
+  },
+  "devDependencies": {
+    "cordova": "^12.0.0"
+  },
+  "cordova": {
+    "platforms": [
+      "android"
+    ],
+    "plugins": {}
+  }
+}
