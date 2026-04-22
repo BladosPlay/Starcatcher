@@ -1,0 +1,15 @@
+{
+  "name": "starcatcher",
+  "version": "1.0.0",
+  "description": "Игра Лови Звезду",
+  "main": "index.js",
+  "scripts": {
+    "build": "cordova build android --release"
+  },
+  "dependencies": {
+    "cordova-android": "^12.0.0"
+  },
+  "devDependencies": {
+    "cordova": "^12.0.0"
+  }
+}

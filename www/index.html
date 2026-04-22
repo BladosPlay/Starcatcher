@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Лови Звезду</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #1a1a2e, #16213e); 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            overflow: hidden; 
+            touch-action: none;
+        }
+        .screen { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            color: white; padding: 20px;
+        }
+        .hidden { display: none !important; }
+        h1 { font-size: 48px; margin-bottom: 20px; text-shadow: 0 0 20px #e94560; }
+        h2 { font-size: 28px; margin-bottom: 30px; color: #ffd700; }
+        button { 
+            background: #e94560; color: white; border: none; 
+            padding: 16px 40px; margin: 10px; font-size: 22px; 
+            border-radius: 50px; cursor: pointer; min-width: 220px; 
+            box-shadow: 0 6px 0 #0f3460; transition: all 0.1s; 
+            font-weight: bold; border: 2px solid #ff6b6b;
+        }
+        button:active { transform: translateY(4px); box-shadow: 0 2px 0 #0f3460; }
+        button.small { padding: 12px 25px; font-size: 18px; min-width: 150px; }
+        input { 
+            padding: 16px; margin: 10px; border-radius: 30px; border: none; 
+            width: 260px; text-align: center; font-size: 18px; 
+            background: rgba(255,255,255,0.9);
+        }
+        .settings-row { 
+            display: flex; align-items: center; justify-content: space-between; 
+            width: 280px; margin: 15px 0; 
+        }
+        .settings-row label { font-size: 20px; }
+        input[type="range"] { width: 150px; }
+        #gameCanvas { display: block; margin: 0 auto; background: linear-gradient(0deg, #0f3460, #1a1a2e); }
+        #gameUI { position: absolute; top: 20px; left: 20px; font-size: 24px; color: white; z-index: 10; }
+        #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #scoreDisplay { font-size: 32px; font-weight: bold; color: #ffd700; }
+    </style>
+    <!-- Phaser Game Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- ЭКРАН 1: АВТОРИЗАЦИЯ -->
+        <div id="loginScreen" class="screen">
+            <h1>⭐ Лови Звезду ⭐</h1>
+            <input type="text" id="usernameInput" placeholder="Введите ваше имя" maxlength="15">
+            <button onclick="login()">Войти в игру</button>
+            <p style="margin-top: 20px; color: #aaa;">Ваше имя сохранится</p>
+        </div>
+
+        <!-- ЭКРАН 2: ГЛАВНОЕ МЕНЮ -->
+        <div id="menuScreen" class="screen hidden">
+            <h1>Привет, <span id="playerNameDisplay">Игрок</span>!</h1>
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 30px; margin: 20px;">
+                <p style="font-size: 24px;">Рекорд: <span id="highScoreDisplay">0</span></p>
+            </div>
+            <button onclick="startGame()">🎮 Играть</button>
+            <button onclick="showSettings()">⚙️ Настройки</button>
+        </div>
+
+        <!-- ЭКРАН 3: НАСТРОЙКИ -->
+        <div id="settingsScreen" class="screen hidden">
+            <h2>⚙️ Настройки</h2>
+            <div class="settings-row">
+                <label>🔊 Звук</label>
+                <input type="checkbox" id="soundToggle" checked onchange="toggleSound()">
+            </div>
+            <div class="settings-row">
+                <label>🎵 Музыка</label>
+                <input type="checkbox" id="musicToggle" checked onchange="toggleMusic()">
+            </div>
+            <div class="settings-row">
+                <label>Громкость</label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="50" onchange="changeVolume()">
+            </div>
+            <button class="small" onclick="backToMenu()">← Назад</button>
+            <button class="small" onclick="logout()">🚪 Выйти</button>
+        </div>
+
+        <!-- ЭКРАН 4: ИГРА -->
+        <div id="gameScreen" class="screen hidden" style="padding: 0; justify-content: flex-start;">
+            <div id="gameUI">
+                <span>⭐ <span id="gameScore">0</span></span>
+            </div>
+            <div id="gameContainer"></div>
+            <button id="exitGameBtn" onclick="exitGame()" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20;">🏠 В меню</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== СИСТЕМА СОХРАНЕНИЙ ====================
+        const STORAGE = {
+            save: function(key, value) {
+                localStorage.setItem(key, JSON.stringify(value));
+            },
+            load: function(key, defaultValue) {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            }
+        };
+
+        // Состояние приложения
+        let currentUser = STORAGE.load('currentUser', '');
+        let highScore = STORAGE.load('highScore', 0);
+        let settings = STORAGE.load('settings', { sound: true, music: true, volume: 50 });
+        
+        // Звуковая система
+        let audioContext = null;
+        let backgroundMusic = null;
+        let isMusicPlaying = false;
+
+        // Игровые переменные
+        let gameInstance = null;
+        let currentScore = 0;
+
+        // ==================== НАВИГАЦИЯ ПО ЭКРАНАМ ====================
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // ==================== АВТОРИЗАЦИЯ ====================
+        function login() {
+            const username = document.getElementById('usernameInput').value.trim();
+            if (username) {
+                currentUser = username;
+                STORAGE.save('currentUser', currentUser);
+                document.getElementById('playerNameDisplay').textContent = currentUser;
+                document.getElementById('highScoreDisplay').textContent = highScore;
+                showScreen('menuScreen');
+                initAudio();
+            } else {
+                alert('Введите имя!');
+            }
+        }
+
+        function logout() {
+            currentUser = '';
+            STORAGE.save('currentUser', '');
+            document.getElementById('usernameInput').value = '';
+            showScreen('loginScreen');
+            stopMusic();
+        }
+
+        // Автоматический вход при загрузке
+        if (currentUser) {
+            document.getElementById('playerNameDisplay').textContent = currentUser;
+            document.getElementById('highScoreDisplay').textContent = highScore;
+            showScreen('menuScreen');
+        }
+
+        // ==================== ЗВУК И МУЗЫКА ====================
+        function initAudio() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {
+                    console.log('Web Audio не поддерживается');
+                }
+            }
+            
+            // Загружаем настройки в интерфейс
+            document.getElementById('soundToggle').checked = settings.sound;
+            document.getElementById('musicToggle').checked = settings.music;
+            document.getElementById('volumeSlider').value = settings.volume;
+            
+            if (settings.music) {
+                playMusic();
+            }
+        }
+
+        function playMusic() {
+            if (!settings.music) return;
+            // Создаем простую фоновую музыку (Web Audio API)
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            if (!isMusicPlaying && audioContext) {
+                // Простой генератор приятного фона
+                const now = audioContext.currentTime;
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 440;
+                gain.gain.value = 0.05 * (settings.volume / 100);
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.start();
+                
+                // Мелодия (простые ноты)
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.5); // E5
+                osc.frequency.setValueAtTime(783.99, now + 1.0); // G5
+                osc.frequency.setValueAtTime(659.25, now + 1.5); // E5
+                osc.frequency.setValueAtTime(523.25, now + 2.0); // C5
+                
+                backgroundMusic = { osc, gain };
+                isMusicPlaying = true;
+            }
+        }
+
+        function stopMusic() {
+            if (backgroundMusic) {
+                backgroundMusic.osc.stop();
+                backgroundMusic = null;
+                isMusicPlaying = false;
+            }
+        }
+
+        function toggleSound() {
+            settings.sound = document.getElementById('soundToggle').checked;
+            STORAGE.save('settings', settings);
+        }
+
+        function toggleMusic() {
+            settings.music = document.getElementById('musicToggle').checked;
+            STORAGE.save('settings', settings);
+            if (settings.music) {
+                playMusic();
+            } else {
+                stopMusic();
+            }
+        }
+
+        function changeVolume() {
+            settings.volume = document.getElementById('volumeSlider').value;
+            STORAGE.save('settings', settings);
+            if (backgroundMusic) {
+                backgroundMusic.gain.gain.value = 0.05 * (settings.volume / 100);
+            }
+        }
+
+        function playSound(type) {
+            if (!settings.sound || !audioContext) return;
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            if (type === 'collect') {
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.1 * (settings.volume / 100), now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            } else if (type === 'gameover') {
+                osc.frequency.value = 220;
+                gain.gain.setValueAtTime(0.15 * (settings.volume / 100), now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            }
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.start();
+            osc.stop(now + 0.2);
+        }
+
+        // ==================== НАСТРОЙКИ И МЕНЮ ====================
+        function showSettings() {
+            showScreen('settingsScreen');
+        }
+
+        function backToMenu() {
+            showScreen('menuScreen');
+        }
+
+        // ==================== ИГРА НА PHASER ====================
+        function startGame() {
+            showScreen('gameScreen');
+            
+            // Запуск аудиоконтекста (требуется взаимодействие пользователя)
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            const config = {
+                type: Phaser.AUTO,
+                width: window.innerWidth,
+                height: window.innerHeight - 100,
+                parent: 'gameContainer',
+                physics: { default: 'arcade', arcade: { gravity: { y: 300 }, debug: false } },
+                scene: { preload: preload, create: create, update: update },
+                transparent: true
+            };
+            
+            gameInstance = new Phaser.Game(config);
+        }
+
+        // Игровые переменные Phaser
+        let player, stars, bombs, platforms, cursors, scoreText;
+        
+        function preload() {
+            // Создаем графику программно
+            this.load.image('sky', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        }
+
+        function create() {
+            const self = this;
+            currentScore = 0;
+            document.getElementById('gameScore').textContent = '0';
+            
+            // Фон
+            this.add.rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, 0x1a1a2e).setOrigin(0, 0);
+            
+            // Платформы
+            platforms = this.physics.add.staticGroup();
+            platforms.create(200, 568, 'sky').setScale(2).refreshBody();
+            platforms.create(600, 400, 'sky').setScale(1).refreshBody();
+            platforms.create(50, 250, 'sky').setScale(1).refreshBody();
+            platforms.create(750, 220, 'sky').setScale(1).refreshBody();
+            
+            // Игрок (кот/персонаж)
+            player = this.physics.add.sprite(100, 450, 'sky');
+            player.setTint(0xffaa00);
+            player.setScale(0.5);
+            player.setBounce(0.2);
+            player.setCollideWorldBounds(true);
+            player.body.setGravityY(300);
+            
+            // Звезды (счет)
+            stars = this.physics.add.group({
+                key: 'sky',
+                repeat: 11,
+                setXY: { x: 12, y: 0, stepX: 70 }
+            });
+            stars.children.iterate(function (child) {
+                child.setTint(0xffd700);
+                child.setScale(0.4);
+                child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+            });
+            
+            // Бомбы (препятствия)
+            bombs = this.physics.add.group();
+            
+            // Коллизии
+            this.physics.add.collider(player, platforms);
+            this.physics.add.collider(stars, platforms);
+            this.physics.add.collider(bombs, platforms);
+            
+            this.physics.add.overlap(player, stars, collectStar, null, this);
+            this.physics.add.collider(player, bombs, hitBomb, null, this);
+            
+            // Управление
+            cursors = this.input.keyboard.createCursorKeys();
+            
+            // Текст счета
+            scoreText = this.add.text(16, 16, '⭐ 0', { fontSize: '32px', fill: '#ffd700' });
+            
+            // Создаем бомбы
+            function collectStar(player, star) {
+                star.disableBody(true, true);
+                currentScore += 10;
+                scoreText.setText('⭐ ' + currentScore);
+                document.getElementById('gameScore').textContent = currentScore;
+                playSound('collect');
+                
+                if (stars.countActive(true) === 0) {
+                    stars.children.iterate(function (child) {
+                        child.enableBody(true, child.x, 0, true, true);
+                    });
+                    const x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+                    const bomb = bombs.create(x, 16, 'sky');
+                    bomb.setTint(0xff3333);
+                    bomb.setScale(0.4);
+                    bomb.setBounce(1);
+                    bomb.setCollideWorldBounds(true);
+                    bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+                    bomb.allowGravity = false;
+                }
+            }
+            
+            function hitBomb(player, bomb) {
+                this.physics.pause();
+                player.setTint(0xff0000);
+                playSound('gameover');
+                
+                if (currentScore > highScore) {
+                    highScore = currentScore;
+                    STORAGE.save('highScore', highScore);
+                    document.getElementById('highScoreDisplay').textContent = highScore;
+                }
+                
+                setTimeout(() => {
+                    alert('Игра окончена! Ваш счёт: ' + currentScore);
+                    exitGame();
+                }, 100);
+            }
+        }
+
+        function update() {
+            if (!cursors) return;
+            
+            if (cursors.left.isDown) {
+                player.setVelocityX(-160);
+            } else if (cursors.right.isDown) {
+                player.setVelocityX(160);
+            } else {
+                player.setVelocityX(0);
+            }
+            
+            if (cursors.up.isDown && player.body.touching.down) {
+                player.setVelocityY(-330);
+            }
+        }
+
+        function exitGame() {
+            if (gameInstance) {
+                gameInstance.destroy(true);
+                gameInstance = null;
+            }
+            document.getElementById('highScoreDisplay').textContent = highScore;
+            showScreen('menuScreen');
+        }
+
+        // Обработка изменения размера окна
+        window.addEventListener('resize', function() {
+            if (gameInstance) {
+                gameInstance.scale.resize(window.innerWidth, window.innerHeight - 100);
+            }
+        });
+
+        // Предотвращаем скролл на мобильных
+        document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    </script>
+</body>
+</html>
