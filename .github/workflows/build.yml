@@ -32,7 +32,7 @@ jobs:
     - name: Install Cordova 12
       run: npm install -g cordova@12.0.0
     
-    - name: Create Cordova project
+    - name: Create Cordova project and build
       run: |
         cordova create app com.starcatcher.game "Лови Звезду"
         cd app
@@ -41,14 +41,11 @@ jobs:
         cp ../config.xml ./
         cordova platform add android@12.0.0
         
-    - name: Set Gradle version to 8.5
-      working-directory: ./app/platforms/android
-      run: |
+        cd platforms/android
         ./gradlew wrapper --gradle-version 8.5
-    
-    - name: Build APK
-      working-directory: ./app
-      run: cordova build android --release
+        cd ../..
+        
+        cordova build android --release
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
