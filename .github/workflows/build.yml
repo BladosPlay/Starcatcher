@@ -13,44 +13,28 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js
+    - name: Setup Node.js 18
       uses: actions/setup-node@v4
       with:
         node-version: '18'
     
-    - name: Setup Java 11 (Cordova 11 требует Java 11)
+    - name: Setup Java 11
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '11'
     
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        packages: 'platforms;android-33 build-tools;33.0.0'
-    
     - name: Install Cordova 11
       run: npm install -g cordova@11.0.0
     
-    - name: Create Cordova project and build
+    - name: Create and build
       run: |
-        # Создаём проект        cordova create app com.starcatcher.game "Лови Звезду"
-        
-        # Переходим в папку проекта
+        cordova create app com.starcatcher.game "Лови Звезду"
         cd app
-        
-        # Копируем наши файлы
         rm -rf www
         cp -r ../www ./
         cp ../config.xml ./
-        
-        # Добавляем платформу Android 11
         cordova platform add android@11.0.0
-        
-        # Убеждаемся, что папка platforms создалась
-        ls -la platforms/
-        
-        # Сборка APK
         cordova build android --release
     
     - name: Upload APK
